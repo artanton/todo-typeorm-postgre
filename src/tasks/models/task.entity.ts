@@ -1,17 +1,18 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { UsersEntity } from 'src/users/models/user.entity';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('tasks')
 export class TasksEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ default: '' })
+  @Column({ type: 'varchar', length: 100 })
   title: string;
 
-  @Column({ default: '' })
+  @Column({ type: 'text', nullable: true })
   text: string;
 
-  @Column({ default: '' })
+  @Column({ type: 'date', nullable: true })
   date: string;
 
   @Column({ default: 0 })
@@ -20,7 +21,10 @@ export class TasksEntity {
   @Column({ default: 0 })
   parentId: number;
 
-  // @ManyToOne(()=>)
+  @ManyToOne(() => UsersEntity, (UsersEntity) => UsersEntity.tasks, {
+    onDelete: 'CASCADE',
+  })
+  owner: UsersEntity;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

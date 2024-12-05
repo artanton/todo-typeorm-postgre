@@ -1,3 +1,5 @@
+import { IUser } from 'src/users/models/user.interface';
+
 export interface ITask {
   id?: number;
   title?: string;
@@ -5,7 +7,7 @@ export interface ITask {
   date?: string;
   subLevel?: number;
   parentId?: number;
-  // owner?: number;
+  owner?: IUser;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -1,15 +1,15 @@
 version: '3.8'
 services:
-  #  app:
-  #   build: .
-  #   volumes:
-  #     - .:/app
-  #     - /app/node_modules
-  #   ports:
-  #     - '3000:3000'
-  #   depends_on:
-  #     - db
-  #   working_dir: /app
+   app:
+    build: .
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+    working_dir: /app
    db:
     image: postgres
     restart: always
