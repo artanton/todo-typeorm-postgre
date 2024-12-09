@@ -1,3 +1,4 @@
+import { JwtGuard } from 'src/users/guards/jwt.guard';
 import { CreateTaskDto } from '../task.dto/create-task.dto';
 import { UpdateTaskDto } from '../task.dto/update-task.dto';
 import { TasksService } from './../services/tasks.service';
@@ -9,12 +10,14 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 
+@UseGuards(JwtGuard)
 @Controller('tasks')
 export class TasksController {
   constructor(private tasksService: TasksService) {}
-
+  // @UseGuards(JwtGuard)
   @Get()
   getAllTasks() {
     return this.tasksService.getAllTasks();

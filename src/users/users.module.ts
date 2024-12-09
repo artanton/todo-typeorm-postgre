@@ -9,10 +9,18 @@ import { JwtStrategy } from './guards/jwt.strategy';
 
 @Module({
   imports: [
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_ACCESS,
-      signOptions: { expiresIn: '60s' },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        global: true,
+        secret: process.env.JWT_ACCESS,
+        signOptions: { expiresIn: '600s' },
+      }),
+    }),
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: process.env.JWT_REFRESH,
+        signOptions: { expiresIn: '7d' },
+      }),
     }),
     TypeOrmModule.forFeature([UsersEntity]),
   ],

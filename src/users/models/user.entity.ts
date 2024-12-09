@@ -25,6 +25,9 @@ export class UsersEntity {
   @Column({ default: false })
   verify: boolean;
 
+  @Column({ type: 'varchar', select: false })
+  avatarURL: string;
+
   @Column({ type: 'varchar', default: '' })
   verificationCode: string;
 
