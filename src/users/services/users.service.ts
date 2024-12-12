@@ -66,6 +66,7 @@ export class UserService {
       );
     }
     return {
+      id: seekedUser.id,
       name: seekedUser.name,
       avatarURL: seekedUser.avatarURL,
       verify: seekedUser.verify,
@@ -73,21 +74,41 @@ export class UserService {
     };
   }
 
+  async generateTokens(email: string) {
+    const payload = { email: email };
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_ACCESS,
+      expiresIn: '600s',
+    });
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_REFRESH,
+      expiresIn: '7d',
+    });
+
+    const hashedRefrshToken = await bcrypt.hash(refreshToken, 10);
+    return { accessToken, refreshToken, hashedRefrshToken };
+  }
+
   async loginUser(user: SignInUserDto) {
     const { email, password } = user;
     const existedUser = await this.validateUser(email, password);
     if (existedUser) {
-      // return this.jwtService.signAsync({ user });
-      // const payload = { userId: existedUser.id, email: existedUser.email };
+      const tokens = await this.generateTokens(existedUser.email);
 
-      const accessToken = await this.jwtService.signAsync({ user });
-
-      const refreshToken = await this.jwtService.signAsync({ user });
-
+      const updatedUser = await this.userRepository.update(existedUser.id, {
+        refreshToken: tokens.hashedRefrshToken,
+      });
+      if (updatedUser.affected === 0) {
+        throw new HttpException(
+          { status: HttpStatus.FORBIDDEN, error: 'something went wrong' },
+          HttpStatus.FORBIDDEN,
+        );
+      }
       return {
-        existedUser,
-        accessToken,
-        refreshToken,
+        user: existedUser,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       };
     }
     throw new HttpException(
@@ -96,10 +117,94 @@ export class UserService {
     );
   }
   async refreshAccessToken(refreshToken: string) {
-    const user = await this.jwtService.verifyAsync(refreshToken, {
-      secret: process.env.JWT_REFRESH,
+    try {
+      const verifiedToken = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.JWT_REFRESH,
+      });
+
+      const email = verifiedToken.email;
+      const existedUser = await this.userRepository
+        .createQueryBuilder('user')
+        .addSelect('user.refreshToken')
+        .where('user.email = :email', { email })
+        .getOne();
+
+      if (!existedUser) {
+        throw new HttpException(
+          {
+            status: HttpStatus.FORBIDDEN,
+            error: 'Invalid refresh token, try to login again',
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      const isValidRefreshToken = await bcrypt.compare(
+        refreshToken,
+        existedUser.refreshToken,
+      );
+
+      if (!isValidRefreshToken) {
+        throw new HttpException(
+          {
+            status: HttpStatus.FORBIDDEN,
+            error: 'Invalid refresh token, try to login again',
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      const tokens = await this.generateTokens(existedUser.email);
+      await this.userRepository.update(existedUser.id, {
+        refreshToken: tokens.hashedRefrshToken,
+      });
+
+      const updatedUser = await this.userRepository.findOne({
+        where: { id: existedUser.id },
+      });
+      return {
+        user: updatedUser,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      };
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new HttpException(
+          {
+            status: HttpStatus.UNAUTHORIZED,
+            error: 'Refresh token expired, please login again',
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async logout(accessToken: string) {
+    const payload = await this.jwtService.verifyAsync(accessToken, {
+      secret: process.env.JWT_ACCESS,
     });
-    console.log(user);
-    // const refreshToken = await this.jwtService.signAsync({ user });
+
+    const email = payload.email;
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    const updatedUser = await this.userRepository.update(user.id, {
+      refreshToken: '',
+    });
+
+    if (!updatedUser) {
+      throw new HttpException(
+        {
+          status: HttpStatus.FORBIDDEN,
+          error: 'Logout failed',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    return { message: 'Logout successful' };
   }
 }

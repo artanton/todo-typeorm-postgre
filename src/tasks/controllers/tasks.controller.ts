@@ -10,6 +10,7 @@ import {
   Param,
   Patch,
   Post,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 
@@ -24,7 +25,8 @@ export class TasksController {
   }
 
   @Post()
-  createTask(@Body() task: CreateTaskDto) {
+  createTask(@Request() req, @Body() task: CreateTaskDto) {
+    console.log(req.user);
     return this.tasksService.createTask(task);
   }
 

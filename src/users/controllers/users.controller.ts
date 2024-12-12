@@ -1,6 +1,7 @@
+import { JwtGuard } from '../guards/jwt.guard';
 import { CreateUserDto } from '../user.dto/create-user.dto';
 import { SignInUserDto } from '../user.dto/signin-user.dto';
-import { UserService } from './../services/users.service';
+import { UserService } from '../services/users.service';
 import {
   Body,
   Controller,
@@ -9,6 +10,7 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 
@@ -29,13 +31,13 @@ export class UsersController {
 
     res.cookie('refreshToken', loggedInUser.refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: false,
       // sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      // maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return {
-      user: loggedInUser.existedUser,
+      user: loggedInUser.user,
       accessToken: loggedInUser.accessToken,
     };
   }
@@ -46,8 +48,6 @@ export class UsersController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = req.cookies['refreshToken'];
-    console.log('req', req);
-    console.log('refreshToken', refreshToken);
     if (!refreshToken) {
       throw new HttpException(
         'Refresh token not provided',
@@ -55,9 +55,38 @@ export class UsersController {
       );
     }
 
-    const newAccessToken =
+    const refreshedUser =
       await this.UserService.refreshAccessToken(refreshToken);
 
-    return res.json(newAccessToken);
+    res.cookie('refreshToken', refreshedUser.refreshToken, {
+      httpOnly: true,
+      secure: false,
+      // sameSite: 'strict',
+      // maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return {
+      user: refreshedUser.user,
+      accessToken: refreshedUser.accessToken,
+    };
+  }
+
+  @UseGuards(JwtGuard)
+  @Post('logout')
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const accessToken = req.headers.authorization?.split(' ')[1];
+    if (!accessToken) {
+      throw new HttpException(
+        'Access token not provided',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    res.cookie('refreshToken', '', {
+      httpOnly: true,
+      secure: false,
+    });
+
+    return await this.UserService.logout(accessToken);
   }
 }
