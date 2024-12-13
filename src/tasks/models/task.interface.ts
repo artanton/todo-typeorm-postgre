@@ -1,4 +1,4 @@
-import { IUser } from 'src/users/models/user.interface';
+import { UsersEntity } from 'src/users/models/user.entity';
 
 export interface ITask {
   id?: number;
@@ -7,7 +7,7 @@ export interface ITask {
   date?: string;
   subLevel?: number;
   parentId?: number;
-  owner?: IUser;
+  owner?: UsersEntity;
   createdAt?: Date;
   updatedAt?: Date;
 }

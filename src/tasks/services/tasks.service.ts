@@ -1,9 +1,14 @@
 import { TasksEntity } from './../models/task.entity';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { CreateTaskDto } from '../task.dto/create-task.dto';
+// import { CreateTaskDto } from '../task.dto/create-task.dto';
 import { UpdateTaskDto } from '../task.dto/update-task.dto';
 import { groupTaskByParentId } from '../task.helper/group.task';
 import { ITask } from '../models/task.interface';
@@ -15,12 +20,28 @@ export class TasksService {
     private readonly tasksRepsitory: Repository<TasksEntity>,
   ) {}
 
-  async getAllTasks() {
-    const result = await this.tasksRepsitory.find();
+  async getAllTasks(owner: number) {
+    console.log(owner);
+    const result = await this.tasksRepsitory
+      .createQueryBuilder('task')
+      .where('task.owner = :owner', { owner })
+      .getMany();
+    console.log(result);
     return result;
   }
 
-  async createTask(task: CreateTaskDto) {
+  async findTaskById(id: number) {
+    const task = await this.tasksRepsitory.findOne({
+      where: { id },
+      relations: ['owner'],
+    });
+    if (!task) {
+      throw new HttpException('Task is not found', HttpStatus.NOT_FOUND);
+    }
+    return task;
+  }
+
+  async createTask(task: ITask) {
     const result = await this.tasksRepsitory.save(task);
     return result;
   }
@@ -34,8 +55,8 @@ export class TasksService {
     return result;
   }
 
-  async removeTask(id: number) {
-    const tasks = await this.getAllTasks();
+  async removeTask(id: number, owner: number) {
+    const tasks = await this.getAllTasks(owner);
     const idToDelete = tasks.find((task) => task.id === id);
     if (!idToDelete) {
       throw new NotFoundException('Task not found');

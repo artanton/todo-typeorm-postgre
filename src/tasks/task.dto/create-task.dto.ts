@@ -16,4 +16,8 @@ export class CreateTaskDto {
 
   @IsNumber()
   parentId: number;
+
+  @IsNumber()
+  @IsOptional()
+  owner: number;
 }

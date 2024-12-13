@@ -75,7 +75,8 @@ export class UserService {
   }
 
   async generateTokens(email: string) {
-    const payload = { email: email };
+    const user = await this.userRepository.findOne({ where: { email } });
+    const payload = { sub: user.id, email: user.email };
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_ACCESS,
       expiresIn: '600s',
@@ -179,6 +180,19 @@ export class UserService {
       }
       throw error;
     }
+  }
+
+  async findUserById(id: number) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['tasks'],
+    });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    delete user.password;
+    delete user.refreshToken;
+    return user;
   }
 
   async logout(accessToken: string) {
