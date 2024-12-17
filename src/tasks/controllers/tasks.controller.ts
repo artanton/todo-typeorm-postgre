@@ -19,8 +19,6 @@ import { IsCreatorGuard } from '../guards/creator-guard';
 @Controller('tasks')
 export class TasksController {
   constructor(private tasksService: TasksService) {}
-  // @UseGuards(JwtGuard)
-  // @UseGuards(IsCreatorGuard)
   @Get()
   getAllTasks(@Request() req) {
     const owner = req.user.id;

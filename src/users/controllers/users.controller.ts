@@ -7,12 +7,18 @@ import {
   Controller,
   HttpException,
   HttpStatus,
+  Patch,
   Post,
-  Req,
+  Request,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { Response, Request } from 'express';
+import { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { join } from 'path';
+import { upload } from '../helpers/image-handler';
 
 @Controller('users')
 export class UsersController {
@@ -43,10 +49,7 @@ export class UsersController {
   }
 
   @Post('refresh')
-  async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async refresh(@Request() req, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies['refreshToken'];
     if (!refreshToken) {
       throw new HttpException(
@@ -73,7 +76,7 @@ export class UsersController {
 
   @UseGuards(JwtGuard)
   @Post('logout')
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async logout(@Request() req, @Res({ passthrough: true }) res: Response) {
     const accessToken = req.headers.authorization?.split(' ')[1];
     if (!accessToken) {
       throw new HttpException(
@@ -88,5 +91,32 @@ export class UsersController {
     });
 
     return await this.UserService.logout(accessToken);
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('avatar')
+  @UseInterceptors(FileInterceptor('avatar', upload))
+  async updateAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ): Promise<object> {
+    const fileName = file?.filename;
+    const email = req.user.email;
+    if (!fileName) {
+      throw new HttpException(
+        {
+          status: HttpStatus.BAD_REQUEST,
+          error: 'File must be a png, jpg/jpeg',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    this.UserService.updateAvatar(email, fileName);
+
+    const imagesFolderPath = join(process.cwd(), 'images');
+    const fullImagePath = join(imagesFolderPath + '/' + file.filename);
+    return { fullImagePath };
+    // const isFileExtensionSafe = await FileExtensionSafe(fullImagePath);
+    // console.log(isFileExtensionSafe);
   }
 }

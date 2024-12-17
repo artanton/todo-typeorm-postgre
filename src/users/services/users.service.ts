@@ -221,4 +221,24 @@ export class UserService {
     }
     return { message: 'Logout successful' };
   }
+
+  async updateAvatar(email: string, fileName: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    const updatedUser = await this.userRepository.update(user.id, {
+      avatarURL: fileName,
+    });
+
+    if (!updatedUser) {
+      throw new HttpException(
+        {
+          status: HttpStatus.FORBIDDEN,
+          error: 'Logout failed',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+  }
 }
