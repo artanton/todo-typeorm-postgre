@@ -227,18 +227,10 @@ export class UserService {
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
-    const updatedUser = await this.userRepository.update(user.id, {
-      avatarURL: fileName,
-    });
+    user.avatarURL = fileName;
 
-    if (!updatedUser) {
-      throw new HttpException(
-        {
-          status: HttpStatus.FORBIDDEN,
-          error: 'Logout failed',
-        },
-        HttpStatus.FORBIDDEN,
-      );
-    }
+    const updatedUser = await this.userRepository.save(user);
+
+    return updatedUser.avatarURL;
   }
 }
